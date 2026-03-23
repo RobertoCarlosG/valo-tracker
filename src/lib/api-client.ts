@@ -71,7 +71,7 @@ class ApiClient {
     return data
   }
 
-  async getTeamById(teamId: string): Promise<TeamInfo> {
+  async getTeamById(teamId: string): Promise<unknown> {
     const { data } = await this.client.get(`/api/v1/teams/id/${teamId}`)
     return data
   }

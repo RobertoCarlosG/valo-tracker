@@ -2,8 +2,32 @@ import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, Trophy, Calendar } from 'lucide-react'
+import { Users, Calendar } from 'lucide-react'
 import { getWinRate } from '@/lib/utils'
+
+/** Forma flexible de la respuesta Premier/Henrik en el detalle de equipo. */
+interface PremierTeamPayload {
+  name?: string
+  tag?: string
+  customization?: { icon?: string }
+  division?: string
+  conference?: string
+  region?: string
+  wins?: number
+  losses?: number
+  score?: number
+  members?: Array<{ puuid?: string; name?: string; tag?: string }>
+}
+
+/** Backend puede devolver el objeto del equipo o un wrapper `{ data: ... }` (API Henrik). */
+function unwrapTeamPayload(payload: unknown): PremierTeamPayload | null {
+  if (!payload || typeof payload !== 'object') return null
+  const obj = payload as Record<string, unknown>
+  if ('data' in obj && obj.data && typeof obj.data === 'object') {
+    return obj.data as PremierTeamPayload
+  }
+  return obj as PremierTeamPayload
+}
 
 export default function TeamDetailPage() {
   const { teamId } = useParams<{ teamId: string }>()
@@ -29,11 +53,10 @@ export default function TeamDetailPage() {
     )
   }
 
-  if (!teamData) {
+  const team = unwrapTeamPayload(teamData)
+  if (!team) {
     return <div className="text-center py-12">Team not found</div>
   }
-
-  const team = teamData.data || teamData
 
   return (
     <div className="space-y-6">
@@ -41,7 +64,11 @@ export default function TeamDetailPage() {
         <CardContent className="pt-6">
           <div className="flex items-start gap-6">
             {team.customization?.icon && (
-              <img src={team.customization.icon} alt={team.name} className="w-24 h-24 rounded-lg" />
+              <img
+                src={team.customization.icon}
+                alt={team.name ?? 'Team'}
+                className="w-24 h-24 rounded-lg"
+              />
             )}
             <div className="flex-1">
               <h1 className="text-4xl font-bold">
@@ -63,7 +90,9 @@ export default function TeamDetailPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Win Rate</p>
-                  <p className="text-2xl font-bold">{getWinRate(team.wins, team.losses)}%</p>
+                  <p className="text-2xl font-bold">
+                    {getWinRate(team.wins ?? 0, team.losses ?? 0)}%
+                  </p>
                 </div>
               </div>
             </div>
@@ -80,9 +109,9 @@ export default function TeamDetailPage() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3">
-            {team.members?.map((member: any) => (
+            {team.members?.map((member) => (
               <div
-                key={member.puuid}
+                key={member.puuid ?? `${member.name}-${member.tag}`}
                 className="flex items-center justify-between p-3 border rounded-lg"
               >
                 <p className="font-medium">
