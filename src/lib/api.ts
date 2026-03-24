@@ -13,6 +13,7 @@ import type {
   TokenResponse,
   UserMeOut,
 } from '@/types/api'
+import { premierRowToTeamInfo } from '@/lib/premier-mappers'
 import { useAuthStore } from '@/stores/authStore'
 
 const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -105,8 +106,17 @@ export async function searchTeams(params: {
   division?: string
   conference?: string
 }): Promise<SearchResult> {
-  const { data } = await api.get<SearchResult>('/api/v1/premier/search', { params })
-  return data
+  const { data } = await api.get<{
+    data?: Record<string, unknown>[]
+    total?: number
+    is_demo_limited?: boolean
+  }>('/api/v1/premier/search', { params })
+  const rows = Array.isArray(data.data) ? data.data : []
+  return {
+    data: rows.map((row) => premierRowToTeamInfo(row)),
+    total: data.total ?? rows.length,
+    is_demo_limited: Boolean(data.is_demo_limited),
+  }
 }
 
 export async function getTeamByName(teamName: string, teamTag: string): Promise<TeamInfo> {

@@ -73,8 +73,9 @@ export interface PlayerProfile {
   mmr?: PlayerMMR
 }
 
+/** Coincide con GET /api/v1/premier/search (`data`, no `teams`). */
 export interface SearchResult {
-  teams: TeamInfo[]
+  data: TeamInfo[]
   total: number
   is_demo_limited: boolean
 }

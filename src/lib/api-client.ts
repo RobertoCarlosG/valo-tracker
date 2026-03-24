@@ -8,6 +8,7 @@ import type {
   DemoUser,
   TokenResponse,
 } from '@/types/api'
+import { premierRowToTeamInfo } from '@/lib/premier-mappers'
 
 class ApiClient {
   private client: AxiosInstance
@@ -41,8 +42,17 @@ class ApiClient {
     division?: string
     conference?: string
   }): Promise<SearchResult> {
-    const { data } = await this.client.get('/api/v1/premier/search', { params })
-    return data
+    const { data } = await this.client.get<{
+      data?: Record<string, unknown>[]
+      total?: number
+      is_demo_limited?: boolean
+    }>('/api/v1/premier/search', { params })
+    const rows = Array.isArray(data.data) ? data.data : []
+    return {
+      data: rows.map((row) => premierRowToTeamInfo(row)),
+      total: data.total ?? rows.length,
+      is_demo_limited: Boolean(data.is_demo_limited),
+    }
   }
 
   async getTeamByName(teamName: string, teamTag: string): Promise<TeamInfo> {

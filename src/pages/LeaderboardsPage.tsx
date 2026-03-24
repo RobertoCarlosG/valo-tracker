@@ -9,10 +9,12 @@ import { Link } from 'react-router-dom'
 export default function LeaderboardsPage() {
   const [region, setRegion] = useState('na')
 
-  const { data: leaderboard, isLoading } = useQuery({
+  const { data: leaderboard, isLoading, isError, error } = useQuery({
     queryKey: ['leaderboard', region],
     queryFn: () => apiClient.getLeaderboard(region),
   })
+
+  const rows = leaderboard?.data ?? []
 
   return (
     <div className="space-y-6">
@@ -43,9 +45,15 @@ export default function LeaderboardsPage() {
                 <div key={i} className="h-20 bg-muted animate-pulse rounded-lg" />
               ))}
             </div>
+          ) : isError ? (
+            <p className="text-center text-destructive py-8 text-sm">
+              {error instanceof Error ? error.message : 'Could not load leaderboard. Check CORS, API URL, and demo auth if enabled.'}
+            </p>
+          ) : rows.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">No teams in this leaderboard yet.</p>
           ) : (
             <div className="space-y-2">
-              {leaderboard?.data.map((team, index) => (
+              {rows.map((team, index) => (
                 <Link
                   key={team.team_id}
                   to={`/teams/${team.team_id}`}
