@@ -97,5 +97,27 @@ export interface DemoUser {
 
 export interface TokenResponse {
   access_token: string
+  refresh_token?: string
   token_type: string
+  expires_in?: number
+  user?: UserOut
+}
+
+export interface UserOut {
+  id: string
+  email: string
+  display_name: string
+  has_team: boolean
+  team_id?: string | null
+}
+
+export interface UserMeOut {
+  id: string
+  email: string
+  display_name: string
+  role: string
+  has_team: boolean
+  team_id: string | null
+  auth_methods: string[]
+  created_at: string
 }

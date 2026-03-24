@@ -11,34 +11,13 @@ import type {
 
 class ApiClient {
   private client: AxiosInstance
-  private token: string | null = null
 
   constructor() {
     this.client = axios.create({
       baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
+      withCredentials: true,
     })
-
-    this.token = localStorage.getItem('access_token')
-
-    this.client.interceptors.request.use((config) => {
-      if (this.token) {
-        config.headers.Authorization = `Bearer ${this.token}`
-      }
-      return config
-    })
-  }
-
-  setToken(token: string) {
-    this.token = token
-    localStorage.setItem('access_token', token)
-  }
-
-  clearToken() {
-    this.token = null
-    localStorage.removeItem('access_token')
   }
 
   async getLeaderboard(
