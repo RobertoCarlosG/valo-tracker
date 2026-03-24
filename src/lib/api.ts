@@ -21,11 +21,18 @@ const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 export const api: AxiosInstance = axios.create({
   baseURL,
   headers: { 'Content-Type': 'application/json' },
-  withCredentials: true,
+  withCredentials: true, // mantener para cookies en mismo dominio / dev local
 })
 
-// Request: no añadimos Authorization (cookies se envían automáticamente)
-// El backend acepta token por Bearer o por cookie
+// Enviar Bearer token desde el store cuando esté disponible (cross-origin).
+api.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().accessToken
+  if (token) {
+    config.headers = config.headers ?? {}
+    config.headers['Authorization'] = `Bearer ${token}`
+  }
+  return config
+})
 
 api.interceptors.response.use(
   (res) => res,
@@ -35,7 +42,14 @@ api.interceptors.response.use(
     if (err.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
       try {
-        await api.post('/auth/refresh')
+        const refreshToken = useAuthStore.getState().refreshToken
+        const body = refreshToken ? { refresh_token: refreshToken } : {}
+        const { data } = await api.post('/auth/refresh', body)
+        if (data.access_token) {
+          useAuthStore
+            .getState()
+            .setTokens(data.access_token, data.refresh_token ?? refreshToken ?? '')
+        }
         return api(originalRequest)
       } catch {
         useAuthStore.getState().logout()

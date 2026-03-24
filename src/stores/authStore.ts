@@ -1,7 +1,7 @@
 /**
  * Store de autenticación.
- * NO persistir tokens (regla ética: httpOnly cookies).
- * Los tokens se envían automáticamente mediante credentials: 'include'.
+ * Tokens en memoria (NO localStorage/sessionStorage).
+ * Se pierden al recargar la página — el refresh token en cookie los renueva.
  */
 import { create } from 'zustand'
 import type { UserMeOut } from '@/types/api'
@@ -11,8 +11,13 @@ export interface AuthState {
   isAuthenticated: boolean
   hasTeam: boolean
   isLoading: boolean
+  /** Access token en memoria (no persistido). */
+  accessToken: string | null
+  /** Refresh token en memoria (no persistido). */
+  refreshToken: string | null
 
   setUser: (user: UserMeOut | null) => void
+  setTokens: (accessToken: string, refreshToken: string) => void
   setLoading: (loading: boolean) => void
   logout: () => void
 }
@@ -22,6 +27,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
   hasTeam: false,
   isLoading: true,
+  accessToken: null,
+  refreshToken: null,
 
   setUser: (user) =>
     set({
@@ -30,6 +37,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       hasTeam: user?.has_team ?? false,
     }),
 
+  setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
+
   setLoading: (isLoading) => set({ isLoading }),
 
   logout: () =>
@@ -37,5 +46,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       user: null,
       isAuthenticated: false,
       hasTeam: false,
+      accessToken: null,
+      refreshToken: null,
     }),
 }))
