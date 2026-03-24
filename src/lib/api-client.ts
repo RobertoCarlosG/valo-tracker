@@ -8,37 +8,17 @@ import type {
   DemoUser,
   TokenResponse,
 } from '@/types/api'
+import { premierRowToTeamInfo } from '@/lib/premier-mappers'
 
 class ApiClient {
   private client: AxiosInstance
-  private token: string | null = null
 
   constructor() {
     this.client = axios.create({
       baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
+      withCredentials: true,
     })
-
-    this.token = localStorage.getItem('access_token')
-
-    this.client.interceptors.request.use((config) => {
-      if (this.token) {
-        config.headers.Authorization = `Bearer ${this.token}`
-      }
-      return config
-    })
-  }
-
-  setToken(token: string) {
-    this.token = token
-    localStorage.setItem('access_token', token)
-  }
-
-  clearToken() {
-    this.token = null
-    localStorage.removeItem('access_token')
   }
 
   async getLeaderboard(
@@ -62,8 +42,17 @@ class ApiClient {
     division?: string
     conference?: string
   }): Promise<SearchResult> {
-    const { data } = await this.client.get('/api/v1/premier/search', { params })
-    return data
+    const { data } = await this.client.get<{
+      data?: Record<string, unknown>[]
+      total?: number
+      is_demo_limited?: boolean
+    }>('/api/v1/premier/search', { params })
+    const rows = Array.isArray(data.data) ? data.data : []
+    return {
+      data: rows.map((row) => premierRowToTeamInfo(row)),
+      total: data.total ?? rows.length,
+      is_demo_limited: Boolean(data.is_demo_limited),
+    }
   }
 
   async getTeamByName(teamName: string, teamTag: string): Promise<TeamInfo> {

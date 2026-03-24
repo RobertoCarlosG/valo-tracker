@@ -10,10 +10,12 @@ import { Link } from 'react-router-dom'
 export default function HomePage() {
   const [region] = useState('na')
 
-  const { data: leaderboard, isLoading } = useQuery({
+  const { data: leaderboard, isLoading, isError } = useQuery({
     queryKey: ['leaderboard', region],
     queryFn: () => apiClient.getLeaderboard(region),
   })
+
+  const topRows = (leaderboard?.data ?? []).slice(0, 5)
 
   return (
     <div className="space-y-8">
@@ -54,9 +56,15 @@ export default function HomePage() {
                   <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />
                 ))}
               </div>
+            ) : isError ? (
+              <p className="text-center text-muted-foreground py-6 text-sm">
+                Leaderboard unavailable. Confirm <code className="text-xs">VITE_API_URL</code> and backend CORS.
+              </p>
+            ) : topRows.length === 0 ? (
+              <p className="text-center text-muted-foreground py-6 text-sm">No leaderboard data yet.</p>
             ) : (
               <div className="space-y-2">
-                {leaderboard?.data.slice(0, 5).map((team) => (
+                {topRows.map((team) => (
                   <Link
                     key={team.team_id}
                     to={`/teams/${team.team_id}`}

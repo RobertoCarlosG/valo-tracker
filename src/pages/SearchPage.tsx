@@ -13,11 +13,13 @@ export default function SearchPage() {
   const [teamTag, setTeamTag] = useState('')
   const [searchTrigger, setSearchTrigger] = useState(0)
 
-  const { data: results, isLoading } = useQuery({
+  const { data: results, isLoading, isError, error } = useQuery({
     queryKey: ['search', teamName, teamTag, searchTrigger],
     queryFn: () => apiClient.searchTeams({ name: teamName, tag: teamTag }),
     enabled: searchTrigger > 0,
   })
+
+  const searchRows = results?.data ?? []
 
   const handleSearch = () => {
     if (teamName || teamTag) {
@@ -61,13 +63,20 @@ export default function SearchPage() {
             </div>
           )}
 
-          {results && results.teams.length > 0 && (
+          {isError && (
+            <p className="text-center text-destructive py-6 text-sm">
+              {error instanceof Error ? error.message : 'Could not load search results. Check the API URL and network.'}
+            </p>
+          )}
+
+          {!isLoading && !isError && searchRows.length > 0 && (
             <div className="space-y-3">
-              {results.teams.map((team) => (
+              {searchRows.map((team) => (
                 <Link
-                  key={team.team_id}
-                  to={`/teams/${team.team_id}`}
-                  className="block p-4 border rounded-lg hover:bg-accent transition"
+                  key={team.team_id || `${team.team_name}-${team.team_tag}`}
+                  to={team.team_id ? `/teams/${team.team_id}` : '#'}
+                  className={`block p-4 border rounded-lg transition ${team.team_id ? 'hover:bg-accent' : 'opacity-60 pointer-events-none'}`}
+                  aria-disabled={!team.team_id}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
@@ -95,14 +104,14 @@ export default function SearchPage() {
             </div>
           )}
 
-          {results && results.teams.length === 0 && (
+          {!isLoading && !isError && searchTrigger > 0 && searchRows.length === 0 && (
             <p className="text-center text-muted-foreground py-8">No teams found</p>
           )}
 
           {results?.is_demo_limited && (
             <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
               <p className="text-sm text-yellow-500 text-center">
-                Demo mode: Limited to {results.teams.length} results. Unlock full access for unlimited searches.
+                Demo mode: Limited to {searchRows.length} results. Unlock full access for unlimited searches.
               </p>
             </div>
           )}

@@ -32,13 +32,13 @@ function unwrapTeamPayload(payload: unknown): PremierTeamPayload | null {
 export default function TeamDetailPage() {
   const { teamId } = useParams<{ teamId: string }>()
 
-  const { data: teamData, isLoading: teamLoading } = useQuery({
+  const { data: teamData, isLoading: teamLoading, isError: teamError, error: teamQueryError } = useQuery({
     queryKey: ['team', teamId],
     queryFn: () => apiClient.getTeamById(teamId!),
     enabled: !!teamId,
   })
 
-  const { data: historyData, isLoading: historyLoading } = useQuery({
+  const { data: historyData, isLoading: historyLoading, isError: historyError } = useQuery({
     queryKey: ['team-history', teamId],
     queryFn: () => apiClient.getTeamHistoryById(teamId!),
     enabled: !!teamId,
@@ -53,10 +53,28 @@ export default function TeamDetailPage() {
     )
   }
 
+  if (teamError) {
+    return (
+      <div className="text-center py-12 space-y-2">
+        <p className="text-destructive text-sm">
+          {teamQueryError instanceof Error
+            ? teamQueryError.message
+            : 'Could not load this team.'}
+        </p>
+        <p className="text-muted-foreground text-xs">
+          With demo mode on, team endpoints need a Bearer token. In Postman, test with{' '}
+          <code className="text-xs">Authorization: Bearer …</code>.
+        </p>
+      </div>
+    )
+  }
+
   const team = unwrapTeamPayload(teamData)
   if (!team) {
     return <div className="text-center py-12">Team not found</div>
   }
+
+  const roster = team.members ?? []
 
   return (
     <div className="space-y-6">
@@ -108,18 +126,25 @@ export default function TeamDetailPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3">
-            {team.members?.map((member) => (
-              <div
-                key={member.puuid ?? `${member.name}-${member.tag}`}
-                className="flex items-center justify-between p-3 border rounded-lg"
-              >
-                <p className="font-medium">
-                  {member.name}#{member.tag}
-                </p>
-              </div>
-            ))}
-          </div>
+          {roster.length > 0 ? (
+            <div className="grid gap-3">
+              {roster.map((member) => (
+                <div
+                  key={member.puuid ?? `${member.name}-${member.tag}`}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
+                  <p className="font-medium">
+                    {member.name}#{member.tag}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground py-6 text-sm">
+              No roster in this response. Henrik sometimes omits members on team-by-id; the API still returned
+              the team shell above.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -137,17 +162,21 @@ export default function TeamDetailPage() {
                 <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />
               ))}
             </div>
-          ) : historyData?.data && historyData.data.length > 0 ? (
+          ) : historyError ? (
+            <p className="text-center text-destructive text-sm py-6">Match history could not be loaded.</p>
+          ) : Array.isArray(historyData?.data) && historyData.data.length > 0 ? (
             <div className="space-y-3">
-              {historyData.data.map((match: any) => (
+              {historyData!.data!.map((match: { id?: string; map?: string; started_at?: string; result?: string }) => (
                 <div
-                  key={match.id}
+                  key={match.id ?? `${match.map}-${match.started_at}`}
                   className="flex items-center justify-between p-4 border rounded-lg"
                 >
                   <div>
                     <p className="font-medium">{match.map || 'Unknown Map'}</p>
                     <p className="text-sm text-muted-foreground">
-                      {new Date(match.started_at).toLocaleDateString()}
+                      {match.started_at
+                        ? new Date(match.started_at).toLocaleDateString()
+                        : '—'}
                     </p>
                   </div>
                   <div className="text-right">
