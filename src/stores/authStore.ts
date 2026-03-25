@@ -1,9 +1,10 @@
 /**
  * Store de autenticación.
- * Tokens en memoria (NO localStorage/sessionStorage).
- * Se pierden al recargar la página — el refresh token en cookie los renueva.
+ * accessToken y refreshToken se persisten en localStorage para sobrevivir recargas.
+ * El objeto user NO se persiste (puede quedar stale) — se rehidrata via getMe() al cargar la app.
  */
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import type { UserMeOut } from '@/types/api'
 
 export interface AuthState {
@@ -11,9 +12,7 @@ export interface AuthState {
   isAuthenticated: boolean
   hasTeam: boolean
   isLoading: boolean
-  /** Access token en memoria (no persistido). */
   accessToken: string | null
-  /** Refresh token en memoria (no persistido). */
   refreshToken: string | null
 
   setUser: (user: UserMeOut | null) => void
@@ -23,33 +22,46 @@ export interface AuthState {
   logout: () => void
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  isAuthenticated: false,
-  hasTeam: false,
-  isLoading: true,
-  accessToken: null,
-  refreshToken: null,
-
-  setUser: (user) =>
-    set({
-      user,
-      isAuthenticated: !!user,
-      hasTeam: user?.has_team ?? false,
-    }),
-
-  setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
-
-  setHasTeam: (hasTeam) => set({ hasTeam }),
-
-  setLoading: (isLoading) => set({ isLoading }),
-
-  logout: () =>
-    set({
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
       user: null,
       isAuthenticated: false,
       hasTeam: false,
+      isLoading: true,
       accessToken: null,
       refreshToken: null,
+
+      setUser: (user) =>
+        set({
+          user,
+          isAuthenticated: !!user,
+          hasTeam: user?.has_team ?? false,
+        }),
+
+      setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
+
+      setHasTeam: (hasTeam) => set({ hasTeam }),
+
+      setLoading: (isLoading) => set({ isLoading }),
+
+      logout: () =>
+        set({
+          user: null,
+          isAuthenticated: false,
+          hasTeam: false,
+          accessToken: null,
+          refreshToken: null,
+        }),
     }),
-}))
+    {
+      name: 'valotracker-auth',
+      storage: createJSONStorage(() => localStorage),
+      // Solo persistir tokens — el user se rehidrata via getMe() en AuthProvider
+      partialize: (state) => ({
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+      }),
+    }
+  )
+)
