@@ -15,6 +15,7 @@ import DashboardPage from './pages/DashboardPage'
 import OnboardingPage from './pages/OnboardingPage'
 import ComparePage from './pages/ComparePage'
 import PlayerDetailPage from './pages/PlayerDetailPage'
+import ProfilePage from './pages/ProfilePage'
 import './index.css'
 
 const queryClient = new QueryClient({
@@ -39,6 +40,14 @@ createRoot(document.getElementById('root')!).render(
               <Route index element={<HomePage />} />
               <Route path="leaderboards" element={<LeaderboardsPage />} />
               <Route path="search" element={<SearchPage />} />
+              <Route
+                path="profile"
+                element={
+                  <ProtectedRoute requireTeam={false}>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="teams/:teamId" element={<TeamDetailPage />} />
               <Route
                 path="dashboard"

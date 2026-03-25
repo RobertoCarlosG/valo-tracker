@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Trophy, Menu } from 'lucide-react'
+import { Trophy, Menu, UserCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useDemoStore } from '@/store/store'
 import { useAuthStore } from '@/stores/authStore'
@@ -28,6 +28,10 @@ export function Navbar() {
           </Link>
           {isAuthenticated && (
             <>
+              <Link to="/profile" className="text-sm hover:text-primary transition inline-flex items-center gap-1">
+                <UserCircle className="h-4 w-4" />
+                Perfil
+              </Link>
               <Link to="/onboarding" className="text-sm hover:text-primary transition">
                 Mi equipo
               </Link>

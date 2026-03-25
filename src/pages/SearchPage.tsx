@@ -1,17 +1,32 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { apiClient } from '@/lib/api-client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Search } from 'lucide-react'
+import { Search, User } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { getWinRate } from '@/lib/utils'
 
+const PLAYER_REGIONS = [
+  { code: 'NA', label: 'NA' },
+  { code: 'EU', label: 'EU' },
+  { code: 'AP', label: 'AP' },
+  { code: 'KR', label: 'KR' },
+  { code: 'LATAM', label: 'LATAM' },
+  { code: 'BR', label: 'BR' },
+]
+
 export default function SearchPage() {
+  const navigate = useNavigate()
   const [teamName, setTeamName] = useState('')
   const [teamTag, setTeamTag] = useState('')
   const [searchTrigger, setSearchTrigger] = useState(0)
+
+  const [pName, setPName] = useState('')
+  const [pTag, setPTag] = useState('')
+  const [pRegion, setPRegion] = useState('NA')
 
   const { data: results, isLoading, isError, error } = useQuery({
     queryKey: ['search', teamName, teamTag, searchTrigger],
@@ -27,9 +42,19 @@ export default function SearchPage() {
     }
   }
 
+  const goPlayerProfile = () => {
+    const n = pName.trim()
+    const t = pTag.trim()
+    if (!n || !t) return
+    navigate(`/players/${pRegion}/${encodeURIComponent(n)}/${encodeURIComponent(t)}`)
+  }
+
   return (
     <div className="space-y-6">
-      <h1 className="text-4xl font-bold">Search Teams</h1>
+      <h1 className="text-4xl font-bold">Buscar</h1>
+      <p className="text-muted-foreground text-sm -mt-2">
+        Equipos Premier o jugadores (MMR, partidas). Inicia sesión si la API está en modo demo.
+      </p>
 
       <Card>
         <CardHeader>
@@ -115,6 +140,51 @@ export default function SearchPage() {
               </p>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Buscar jugador
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Abre el perfil con rank, MMR, historial y partidas recientes (mismos datos que para tu equipo en el roster).
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+            <div className="sm:w-28">
+              <label className="text-xs text-muted-foreground">Región</label>
+              <select
+                value={pRegion}
+                onChange={(e) => setPRegion(e.target.value)}
+                className="mt-1 w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                {PLAYER_REGIONS.map((r) => (
+                  <option key={r.code} value={r.code}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Input
+              placeholder="Nombre en juego"
+              value={pName}
+              onChange={(e) => setPName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && goPlayerProfile()}
+            />
+            <Input
+              placeholder="Tag (ej. 1234)"
+              value={pTag}
+              onChange={(e) => setPTag(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && goPlayerProfile()}
+            />
+            <Button type="button" onClick={goPlayerProfile} disabled={!pName.trim() || !pTag.trim()}>
+              Ver perfil
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

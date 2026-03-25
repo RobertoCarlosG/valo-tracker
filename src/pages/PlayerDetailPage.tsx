@@ -5,7 +5,8 @@ import {
 } from 'recharts'
 import { Loader2, AlertCircle, Users } from 'lucide-react'
 import { api } from '@/lib/api'
-import { useTeamStore } from '@/stores/teamStore'
+import { useAuthStore } from '@/stores/authStore'
+import { useMyTeam } from '@/hooks/useMyTeam'
 
 // ─────────────────────────────────────────
 // Data fetchers
@@ -77,16 +78,22 @@ function MMRChart({ points }: { points: MMRPoint[] }) {
 
 export default function PlayerDetailPage() {
   const { region, name, tag } = useParams<{ region: string; name: string; tag: string }>()
-  const { savedTeam } = useTeamStore()
+  const decodedName = name ? decodeURIComponent(name) : ''
+  const decodedTag = tag ? decodeURIComponent(tag) : ''
+  const canFetch = !!(region && decodedName && decodedTag)
+
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const hasTeam = useAuthStore((s) => s.hasTeam)
+  const { data: myTeamData } = useMyTeam({ enabled: isAuthenticated && hasTeam })
 
   const {
     data: mmrData,
     isLoading: mmrLoading,
     isError: mmrError,
   } = useQuery({
-    queryKey: ['player-mmr', region, name, tag],
-    queryFn: () => fetchMMR(region!, name!, tag!),
-    enabled: !!(region && name && tag),
+    queryKey: ['player-mmr', region, decodedName, decodedTag],
+    queryFn: () => fetchMMR(region!, decodedName, decodedTag),
+    enabled: canFetch,
     staleTime: 60_000,
     retry: 1,
   })
@@ -96,26 +103,26 @@ export default function PlayerDetailPage() {
     isLoading: matchesLoading,
     isError: matchesError,
   } = useQuery({
-    queryKey: ['player-matches', region, name, tag],
-    queryFn: () => fetchMatches(region!, name!, tag!),
-    enabled: !!(region && name && tag),
+    queryKey: ['player-matches', region, decodedName, decodedTag],
+    queryFn: () => fetchMatches(region!, decodedName, decodedTag),
+    enabled: canFetch,
     staleTime: 60_000,
     retry: 1,
   })
 
-  if (!region || !name || !tag) {
+  if (!canFetch) {
     return (
       <div className="text-center py-16 text-muted-foreground text-sm">Parámetros de jugador inválidos.</div>
     )
   }
 
-  // Detect if player is on the user's linked team
-  const isMyTeamMember = savedTeam && mmrData
-    ? (() => {
-        const fullName = `${name}#${tag}`.toLowerCase()
-        return fullName.includes(name.toLowerCase())
-      })()
-    : false
+  const isMyTeamMember = Boolean(
+    myTeamData?.roster?.some(
+      (m) =>
+        m.name?.toLowerCase() === decodedName.toLowerCase() &&
+        m.tag?.toLowerCase() === decodedTag.toLowerCase()
+    )
+  )
 
   // Parse MMR history from the response (Henrik MMR v2 structure)
   const mmrCurrent: number | null = mmrData?.data?.elo ?? null
@@ -144,12 +151,12 @@ export default function PlayerDetailPage() {
       <div className="bg-card border rounded-xl p-5">
         <div className="flex items-start gap-4">
           <div className="w-16 h-16 rounded-full bg-blue-600/20 flex items-center justify-center text-xl font-bold text-blue-400 flex-shrink-0">
-            {initials(name)}
+            {initials(decodedName)}
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-bold">{name}</h1>
-              <span className="text-muted-foreground text-lg">#{tag}</span>
+              <h1 className="text-2xl font-bold">{decodedName}</h1>
+              <span className="text-muted-foreground text-lg">#{decodedTag}</span>
               {isMyTeamMember && (
                 <span className="flex items-center gap-1 text-xs bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-medium">
                   <Users className="w-3 h-3" /> Tu equipo
