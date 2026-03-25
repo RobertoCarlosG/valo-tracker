@@ -32,5 +32,10 @@ export function ProtectedRoute({ children, requireTeam = true }: ProtectedRouteP
     return <Navigate to="/onboarding" replace />
   }
 
+  // Already has team but trying to access onboarding
+  if (!requireTeam && hasTeam) {
+    return <Navigate to="/dashboard" replace />
+  }
+
   return <>{children}</>
 }

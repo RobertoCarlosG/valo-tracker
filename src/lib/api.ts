@@ -12,6 +12,11 @@ import type {
   DemoUser,
   TokenResponse,
   UserMeOut,
+  MyTeamResponse,
+  TeamLinkRequest,
+  TeamLinkResponse,
+  TeamSnapshotsResponse,
+  PlayerSnapshotsResponse,
 } from '@/types/api'
 import { premierRowToTeamInfo } from '@/lib/premier-mappers'
 import { useAuthStore } from '@/stores/authStore'
@@ -147,6 +152,39 @@ export async function getPlayerAccount(name: string, tag: string): Promise<Playe
   const { data } = await api.get<PlayerProfile>(`/api/v1/players/account/${name}/${tag}`)
   return data
 }
+
+// ─────────────────────────────────────────
+// My Team
+// ─────────────────────────────────────────
+
+export async function linkTeam(body: TeamLinkRequest): Promise<TeamLinkResponse> {
+  const { data } = await api.post<TeamLinkResponse>('/api/v1/my-team/link', body)
+  return data
+}
+
+export async function getMyTeam(): Promise<MyTeamResponse> {
+  const { data } = await api.get<MyTeamResponse>('/api/v1/my-team')
+  return data
+}
+
+export async function getTeamSnapshots(days = 30): Promise<TeamSnapshotsResponse> {
+  const { data } = await api.get<TeamSnapshotsResponse>(`/api/v1/my-team/snapshots?days=${days}`)
+  return data
+}
+
+export async function getPlayerSnapshots(days = 14): Promise<PlayerSnapshotsResponse> {
+  const { data } = await api.get<PlayerSnapshotsResponse>(`/api/v1/my-team/players/snapshots?days=${days}`)
+  return data
+}
+
+export async function unlinkTeam(): Promise<{ message: string }> {
+  const { data } = await api.delete<{ message: string }>('/api/v1/my-team')
+  return data
+}
+
+// ─────────────────────────────────────────
+// Demo
+// ─────────────────────────────────────────
 
 export async function getDemoStatus(): Promise<DemoStatus> {
   const { data } = await api.get<DemoStatus>('/api/v1/demo/status')

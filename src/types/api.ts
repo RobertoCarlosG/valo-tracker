@@ -122,3 +122,130 @@ export interface UserMeOut {
   auth_methods: string[]
   created_at: string
 }
+
+// ─────────────────────────────────────────
+// My Team / Onboarding
+// ─────────────────────────────────────────
+
+export interface SavedTeamOut {
+  id: string
+  team_id: string
+  team_name: string
+  team_tag: string
+  region: string
+  division: string | null
+  conference: string | null
+  linked_at: string
+  is_primary: boolean
+}
+
+export interface TeamLiveData {
+  rank_position: number | null
+  wins: number | null
+  losses: number | null
+  division: string | null
+  conference: string | null
+}
+
+export interface RosterMember {
+  puuid: string
+  name: string
+  tag: string
+  mmr_current?: number | null
+  rank_tier?: string | null
+  rr_current?: number | null
+}
+
+export interface MyTeamResponse {
+  saved_team: SavedTeamOut
+  live: TeamLiveData
+  roster: RosterMember[]
+  last_snapshot_at: string | null
+}
+
+export interface TeamLinkRequest {
+  team_id: string
+  team_name: string
+  team_tag: string
+  region: string
+  division?: string | null
+  conference?: string | null
+}
+
+export interface TeamLinkResponse {
+  team: SavedTeamOut
+  initial_snapshot: {
+    rank_position: number | null
+    wins: number | null
+    losses: number | null
+  } | null
+}
+
+// ─────────────────────────────────────────
+// Snapshots / Trends
+// ─────────────────────────────────────────
+
+export interface TeamSnapshot {
+  snapshot_at: string
+  rank_position: number | null
+  wins: number | null
+  losses: number | null
+  points: number | null
+}
+
+export interface TeamTrend {
+  rank_delta_7d: number | null
+  rank_delta_30d: number | null
+  win_rate_7d: number | null
+  win_rate_30d: number | null
+}
+
+export interface TeamSnapshotsResponse {
+  team_id: string
+  snapshots: TeamSnapshot[]
+  trend: TeamTrend
+}
+
+export interface PlayerSnapshot {
+  snapshot_at: string
+  mmr_current: number | null
+  rank_tier: string | null
+  rr_current: number | null
+}
+
+export interface PlayerWithSnapshots {
+  puuid: string
+  name: string
+  tag: string
+  snapshots: PlayerSnapshot[]
+  trend: {
+    mmr_delta_7d: number | null
+    mmr_delta_30d: number | null
+  }
+}
+
+export interface PlayerSnapshotsResponse {
+  players: PlayerWithSnapshots[]
+}
+
+// ─────────────────────────────────────────
+// Search result (de premier search, simplificado para onboarding)
+// ─────────────────────────────────────────
+
+export interface PremierTeamResult {
+  id: string
+  name: string
+  tag: string
+  division: string | null
+  conference: string | null
+  region: string | null
+  wins: number
+  losses: number
+  score: number
+  placement: number | null
+  customization?: {
+    icon?: string
+    image?: string
+    primary_color?: string
+  }
+}

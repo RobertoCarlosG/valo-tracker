@@ -18,6 +18,7 @@ export interface AuthState {
 
   setUser: (user: UserMeOut | null) => void
   setTokens: (accessToken: string, refreshToken: string) => void
+  setHasTeam: (v: boolean) => void
   setLoading: (loading: boolean) => void
   logout: () => void
 }
@@ -38,6 +39,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     }),
 
   setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
+
+  setHasTeam: (hasTeam) => set({ hasTeam }),
 
   setLoading: (isLoading) => set({ isLoading }),
 
