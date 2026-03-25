@@ -249,3 +249,49 @@ export interface PremierTeamResult {
     primary_color?: string
   }
 }
+
+// ─────────────────────────────────────────
+// Comparativas (Fase 4)
+// ─────────────────────────────────────────
+
+export interface TeamCompareData {
+  name: string
+  tag: string
+  rank_position: number | null
+  wins: number | null
+  losses: number | null
+  win_rate: number | null
+  rank_trend_7d: number | null
+  division: string | null
+  conference: string | null
+}
+
+export interface CompareResponse {
+  my_team: TeamCompareData
+  rival_team: TeamCompareData
+  comparison: {
+    rank_gap: number | null
+    win_rate_gap: number
+    my_team_better: boolean | null
+  }
+}
+
+// ─────────────────────────────────────────
+// Player detail (Fase 4)
+// ─────────────────────────────────────────
+
+export interface MMRHistoryPoint {
+  date: string
+  mmr: number | null
+  rank_tier: string | null
+  rr: number | null
+}
+
+export interface PlayerMatchEntry {
+  match_id: string
+  map: string | null
+  started_at: string | null
+  result: string | null
+  rounds_won: number | null
+  rounds_lost: number | null
+}

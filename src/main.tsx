@@ -13,6 +13,8 @@ import LoginPage from './pages/LoginPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import DashboardPage from './pages/DashboardPage'
 import OnboardingPage from './pages/OnboardingPage'
+import ComparePage from './pages/ComparePage'
+import PlayerDetailPage from './pages/PlayerDetailPage'
 import './index.css'
 
 const queryClient = new QueryClient({
@@ -54,6 +56,15 @@ createRoot(document.getElementById('root')!).render(
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="compare"
+                element={
+                  <ProtectedRoute requireTeam>
+                    <ComparePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="players/:region/:name/:tag" element={<PlayerDetailPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
