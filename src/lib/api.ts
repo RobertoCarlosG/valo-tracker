@@ -119,6 +119,7 @@ export async function getLeaderboard(
   return data
 }
 
+/** Búsqueda Premier. `division` es el número de división (1–20), no la región NA/EU. */
 export async function searchTeams(params: {
   name?: string
   tag?: string

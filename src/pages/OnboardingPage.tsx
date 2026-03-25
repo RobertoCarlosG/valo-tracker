@@ -106,7 +106,8 @@ export default function OnboardingPage() {
     const timer = setTimeout(async () => {
       update({ loading: true, error: null })
       try {
-        const res = await searchTeams({ name: state.query, division: state.region ?? undefined })
+        // Henrik /premier/search: `division` es número 1–20, no la región (NA/EU). No enviar region ahí.
+        const res = await searchTeams({ name: state.query })
         update({ results: res.data, loading: false })
       } catch {
         update({ loading: false, error: 'No se pudo buscar. Intenta de nuevo.' })
