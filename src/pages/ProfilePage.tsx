@@ -11,6 +11,7 @@ import {
   GitCompare,
   Users,
 } from 'lucide-react'
+import { useAuthHydrated } from '@/hooks/useAuthHydrated'
 import { useAuthStore } from '@/stores/authStore'
 import { useValorantIdentityStore } from '@/stores/valorantIdentityStore'
 import { getMe } from '@/lib/api'
@@ -26,6 +27,8 @@ const REGIONS = [
 ]
 
 export default function ProfilePage() {
+  const hydrated = useAuthHydrated()
+  const accessToken = useAuthStore((s) => s.accessToken)
   const { user: storeUser, setUser } = useAuthStore()
   const { riotName, riotTag, riotRegion, setIdentity, clear } = useValorantIdentityStore()
 
@@ -43,6 +46,7 @@ export default function ProfilePage() {
     queryKey: ['users-me-profile'],
     queryFn: getMe,
     staleTime: 30_000,
+    enabled: hydrated && !!accessToken,
   })
 
   useEffect(() => {
@@ -50,6 +54,7 @@ export default function ProfilePage() {
   }, [freshUser, setUser])
 
   const user = freshUser ?? storeUser
+  const accountLoading = !hydrated || (!!accessToken && loadingMe)
   const hasTeam = user?.has_team ?? false
 
   const { data: teamData, isLoading: loadingTeam } = useMyTeam({
@@ -79,7 +84,7 @@ export default function ProfilePage() {
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
           <User className="w-4 h-4" /> Cuenta
         </h2>
-        {loadingMe && !user ? (
+        {accountLoading && !user ? (
           <div className="h-20 bg-muted animate-pulse rounded-lg" />
         ) : user ? (
           <dl className="space-y-2 text-sm">

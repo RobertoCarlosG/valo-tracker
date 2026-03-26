@@ -1,29 +1,31 @@
 import { useEffect, type ReactNode } from 'react'
 import { getMe } from '@/lib/api'
+import { useAuthHydrated } from '@/hooks/useAuthHydrated'
 import { useAuthStore } from '@/stores/authStore'
 
 /**
- * Al montar la app, intenta restaurar la sesión del usuario.
- * Los tokens se cargan automáticamente desde localStorage via el store persistido.
- * Aquí solo se rehidrata el objeto user (que no se persiste por ser stale-prone).
+ * Tras la rehidratación de Zustand (tokens en localStorage), restaura `user` con getMe().
+ * Sin esperar a persist, el primer render ve accessToken null y la sesión queda rota.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const hydrated = useAuthHydrated()
   const { setUser, setLoading, accessToken, logout } = useAuthStore()
 
   useEffect(() => {
-    // Si no hay token persistido, no hay sesión que restaurar
+    if (!hydrated) {
+      return
+    }
+
     if (!accessToken) {
       setLoading(false)
       return
     }
 
-    // Con token disponible, obtener perfil actualizado del servidor
     getMe()
       .then((user) => {
         if (user) {
           setUser(user)
         } else {
-          // Token inválido/expirado y refresh también falló
           logout()
         }
       })
@@ -33,8 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => {
         setLoading(false)
       })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Solo al montar — accessToken inicial viene del store persistido
+  }, [hydrated, accessToken, setUser, setLoading, logout])
 
   return <>{children}</>
 }
