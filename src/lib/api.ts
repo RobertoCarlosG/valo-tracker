@@ -111,7 +111,7 @@ export function getGoogleAuthUrl(): string {
 // --- Premier / Teams / Players (delegar al api-client existente para compatibilidad) ---
 
 export async function getLeaderboard(
-  affinity: string,
+  region: string,
   conference?: string,
   division?: string
 ): Promise<LeaderboardResponse> {
@@ -119,7 +119,7 @@ export async function getLeaderboard(
   if (conference) params.append('conference', conference)
   if (division) params.append('division', division)
   const { data } = await api.get<LeaderboardResponse>(
-    `/api/v1/premier/leaderboard/${affinity}?${params.toString()}`
+    `/api/v1/premier/leaderboard/${region}?${params.toString()}`
   )
   return data
 }

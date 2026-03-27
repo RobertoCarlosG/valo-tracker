@@ -22,7 +22,7 @@ class ApiClient {
   }
 
   async getLeaderboard(
-    affinity: string,
+    region: string,
     conference?: string,
     division?: string
   ): Promise<LeaderboardResponse> {
@@ -31,7 +31,7 @@ class ApiClient {
     if (division) params.append('division', division)
 
     const { data } = await this.client.get(
-      `/api/v1/premier/leaderboard/${affinity}?${params.toString()}`
+      `/api/v1/premier/leaderboard/${region}?${params.toString()}`
     )
     return data
   }
@@ -80,14 +80,14 @@ class ApiClient {
     return data
   }
 
-  async getPlayerMMR(affinity: string, name: string, tag: string) {
-    const { data } = await this.client.get(`/api/v1/players/mmr/${affinity}/${name}/${tag}`)
+  async getPlayerMMR(region: string, name: string, tag: string) {
+    const { data } = await this.client.get(`/api/v1/players/mmr/${region}/${name}/${tag}`)
     return data
   }
 
-  async getPlayerMatches(affinity: string, name: string, tag: string, mode?: string) {
+  async getPlayerMatches(region: string, name: string, tag: string, mode?: string) {
     const params = mode ? { mode } : {}
-    const { data } = await this.client.get(`/api/v1/players/matches/${affinity}/${name}/${tag}`, {
+    const { data } = await this.client.get(`/api/v1/players/matches/${region}/${name}/${tag}`, {
       params,
     })
     return data
@@ -118,8 +118,8 @@ class ApiClient {
     return data
   }
 
-  async getSeasons(affinity: string) {
-    const { data } = await this.client.get(`/api/v1/premier/seasons/${affinity}`)
+  async getSeasons(region: string) {
+    const { data } = await this.client.get(`/api/v1/premier/seasons/${region}`)
     return data
   }
 }

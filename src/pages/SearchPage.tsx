@@ -160,7 +160,7 @@ export default function SearchPage() {
               <select
                 value={pRegion}
                 onChange={(e) => setPRegion(e.target.value)}
-                className="mt-1 w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                className="mt-1 w-full h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 [&>option]:bg-popover [&>option]:text-foreground"
               >
                 {PLAYER_REGIONS.map((r) => (
                   <option key={r.code} value={r.code}>
