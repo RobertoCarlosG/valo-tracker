@@ -32,10 +32,139 @@ function initials(name: string): string {
   return name.slice(0, 2).toUpperCase()
 }
 
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`
+/** Fecha desde ISO, texto local de Henrik o unix (`date_raw` en segundos). */
+function formatDateFromHenrik(dateStr: unknown, dateRaw?: unknown): string {
+  if (typeof dateRaw === 'number' && dateRaw > 0) {
+    const ms = dateRaw < 1e12 ? dateRaw * 1000 : dateRaw
+    const d = new Date(ms)
+    if (!Number.isNaN(d.getTime())) {
+      return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`
+    }
+  }
+  if (typeof dateStr === 'string' && dateStr.trim()) {
+    const d = new Date(dateStr)
+    if (!Number.isNaN(d.getTime())) {
+      return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`
+    }
+  }
+  return '—'
+}
+
+/** Snapshot actual: Henrik v2 usa `data.current_data`; respuestas antiguas pueden tener campos en la raíz de `data`. */
+function getMmrCurrentSlice(mmrResponse: Record<string, unknown> | undefined): Record<string, unknown> | null {
+  const inner = mmrResponse?.data as Record<string, unknown> | undefined
+  if (!inner) return null
+  const cur = inner.current_data
+  if (cur && typeof cur === 'object') return cur as Record<string, unknown>
+  if (typeof inner.elo === 'number' || typeof inner.currenttierpatched === 'string') return inner
+  return inner
+}
+
+function mapNameFromMatch(m: Record<string, unknown>): string {
+  const map = m.map
+  if (map && typeof map === 'object' && map !== null && 'name' in map) {
+    return String((map as { name: string }).name)
+  }
+  if (typeof map === 'string') return map
+  const meta = m.metadata as Record<string, unknown> | undefined
+  const mm = meta?.map
+  if (mm && typeof mm === 'object' && mm !== null && 'name' in mm) {
+    return String((mm as { name: string }).name)
+  }
+  if (typeof mm === 'string') return mm
+  return 'Mapa desconocido'
+}
+
+/** Derrota/Victoria del jugador en la partida (estructura típica Henrik v3). */
+function playerWonMatch(
+  m: Record<string, unknown>,
+  name: string,
+  tag: string
+): boolean | null {
+  const players = m.players as Record<string, unknown> | undefined
+  const all = players?.all_players as Record<string, unknown>[] | undefined
+  if (!Array.isArray(all)) return null
+  const me = all.find(
+    (p) =>
+      String(p.name || '').toLowerCase() === name.toLowerCase() &&
+      String(p.tag || '').toLowerCase() === tag.toLowerCase()
+  )
+  if (!me) return null
+  const team = String(me.team || '').toLowerCase()
+  const teams = m.teams as Record<string, unknown> | undefined
+  const red = teams?.red as Record<string, unknown> | undefined
+  const blue = teams?.blue as Record<string, unknown> | undefined
+  const redWon = red?.has_won === true
+  const blueWon = blue?.has_won === true
+  if (team === 'red') return redWon ? true : blueWon ? false : null
+  if (team === 'blue') return blueWon ? true : redWon ? false : null
+  return null
+}
+
+/** Rondas a favor / en contra desde el punto de vista del jugador. */
+function roundScoreLine(m: Record<string, unknown>, name: string, tag: string): string | null {
+  const teams = m.teams as Record<string, unknown> | undefined
+  const red = teams?.red as Record<string, unknown> | undefined
+  const blue = teams?.blue as Record<string, unknown> | undefined
+  const rw = typeof red?.rounds_won === 'number' ? red.rounds_won : null
+  const bw = typeof blue?.rounds_won === 'number' ? blue.rounds_won : null
+  if (rw == null || bw == null) return null
+  const players = m.players as Record<string, unknown> | undefined
+  const all = players?.all_players as Record<string, unknown>[] | undefined
+  const me = Array.isArray(all)
+    ? all.find(
+        (p) =>
+          String(p.name || '').toLowerCase() === name.toLowerCase() &&
+          String(p.tag || '').toLowerCase() === tag.toLowerCase()
+      )
+    : undefined
+  const team = String(me?.team || '').toLowerCase()
+  if (team === 'red') return `${rw} - ${bw}`
+  if (team === 'blue') return `${bw} - ${rw}`
+  return `${rw} - ${bw}`
+}
+
+function playerKdLine(m: Record<string, unknown>, name: string, tag: string): string | null {
+  const players = m.players as Record<string, unknown> | undefined
+  const all = players?.all_players as Record<string, unknown>[] | undefined
+  const me = Array.isArray(all)
+    ? all.find(
+        (p) =>
+          String(p.name || '').toLowerCase() === name.toLowerCase() &&
+          String(p.tag || '').toLowerCase() === tag.toLowerCase()
+      )
+    : undefined
+  const stats = me?.stats as Record<string, unknown> | undefined
+  if (!stats) return null
+  const k = stats.kills
+  const d = stats.deaths
+  const a = stats.assists
+  if (typeof k !== 'number' && typeof d !== 'number') return null
+  const parts = [`${k ?? '—'}/${d ?? '—'}`]
+  if (typeof a === 'number') parts.push(`${a} ast`)
+  return parts.join(' · ')
+}
+
+function matchQueueLabel(m: Record<string, unknown>): string | null {
+  const meta = m.metadata as Record<string, unknown> | undefined
+  const raw = meta?.mode_id ?? meta?.queue_id
+  if (typeof raw !== 'string' || !raw.trim()) return null
+  if (raw.length >= 30 && raw.includes('-')) return null
+  return raw.length > 28 ? `${raw.slice(0, 26)}…` : raw
+}
+
+function matchDateDisplay(m: Record<string, unknown>): string {
+  const meta = m.metadata as Record<string, unknown> | undefined
+  const gs = meta?.game_start
+  if (typeof gs === 'number' && gs > 0) {
+    return formatDateFromHenrik(undefined, gs)
+  }
+  const patched =
+    (typeof meta?.game_start_patched === 'string' && meta.game_start_patched) ||
+    (typeof meta?.game_start === 'string' && meta.game_start) ||
+    undefined
+  if (patched) return formatDateFromHenrik(patched, undefined)
+  return '—'
 }
 
 // ─────────────────────────────────────────
@@ -124,20 +253,22 @@ export default function PlayerDetailPage() {
     )
   )
 
-  // Parse MMR history from the response (Henrik MMR v2 structure)
-  const mmrCurrent: number | null = mmrData?.data?.elo ?? null
-  const rankTier: string | null = mmrData?.data?.currenttierpatched ?? null
-  const rrCurrent: number | null = mmrData?.data?.ranking_in_tier ?? null
+  // Henrik v2 MMR: stats en `data.current_data`; historial en `data.mmr_history`
+  const mmrSlice = getMmrCurrentSlice(mmrData as Record<string, unknown> | undefined)
+  const mmrCurrent = typeof mmrSlice?.elo === 'number' ? mmrSlice.elo : null
+  const rankTier =
+    typeof mmrSlice?.currenttierpatched === 'string' ? mmrSlice.currenttierpatched : null
+  const rrCurrent = typeof mmrSlice?.ranking_in_tier === 'number' ? mmrSlice.ranking_in_tier : null
 
-  // Build chart points from mmr_history if available
   const mmrHistory: MMRPoint[] = (() => {
-    const history = mmrData?.data?.mmr_history ?? mmrData?.data?.by_season ?? []
+    const inner = mmrData?.data as Record<string, unknown> | undefined
+    const history = inner?.mmr_history
     if (!Array.isArray(history) || history.length === 0) return []
     return history
       .filter((h: Record<string, unknown>) => h.elo != null)
       .slice(-30)
       .map((h: Record<string, unknown>) => ({
-        date: formatDate(h.date as string ?? h.match_start as string),
+        date: formatDateFromHenrik(h.date, h.date_raw),
         mmr: h.elo as number,
       }))
   })()
@@ -227,35 +358,47 @@ export default function PlayerDetailPage() {
         ) : (
           <div className="space-y-2">
             {matches.map((match, i) => {
-              const result = (match.result as string | null) ?? (match.teams as Record<string, unknown>)?.winner as string ?? null
-              const isWin = result?.toLowerCase() === 'win' || result?.toLowerCase() === 'blue' || result?.toLowerCase() === 'red'
-              const map = (match.map as string | null) ?? (match.metadata as Record<string, unknown>)?.map as string ?? 'Mapa desconocido'
-              const date = (match.started_at as string | null) ?? (match.metadata as Record<string, unknown>)?.game_start as string
-              const roundsWon = match.rounds_won as number | null
-              const roundsLost = match.rounds_lost as number | null
+              const m = match as Record<string, unknown>
+              const won = playerWonMatch(m, decodedName, decodedTag)
+              const map = mapNameFromMatch(m)
+              const dateShown = matchDateDisplay(m)
+              const roundsLine = roundScoreLine(m, decodedName, decodedTag)
+              const kd = playerKdLine(m, decodedName, decodedTag)
+              const queue = matchQueueLabel(m)
+              const key =
+                (m.match_id as string) ||
+                ((m.metadata as Record<string, unknown> | undefined)?.matchid as string) ||
+                `match-${i}`
 
               return (
                 <div
-                  key={(match.match_id as string) ?? `match-${i}`}
-                  className="flex items-center justify-between p-3 border border-border/50 rounded-lg hover:bg-muted/30 transition-colors"
+                  key={key}
+                  className="flex items-center justify-between gap-3 p-3 border border-border/50 rounded-lg hover:bg-muted/30 transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-1.5 h-10 rounded-full ${
-                      result ? (isWin ? 'bg-green-500' : 'bg-red-500') : 'bg-muted-foreground/30'
-                    }`} />
-                    <div>
-                      <div className="font-medium text-sm">{map}</div>
-                      <div className="text-xs text-muted-foreground">{formatDate(date as string)}</div>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={`w-1.5 h-10 rounded-full flex-shrink-0 ${
+                        won === true ? 'bg-green-500' : won === false ? 'bg-red-500' : 'bg-muted-foreground/30'
+                      }`}
+                    />
+                    <div className="min-w-0">
+                      <div className="font-medium text-sm truncate">{map}</div>
+                      <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 gap-y-0.5">
+                        <span>{dateShown}</span>
+                        {queue && <span className="text-muted-foreground/80">· {queue}</span>}
+                      </div>
+                      {kd && <div className="text-[11px] text-muted-foreground mt-0.5">{kd}</div>}
                     </div>
                   </div>
-                  <div className="text-right">
-                    {result && (
-                      <div className={`font-bold text-sm ${isWin ? 'text-green-400' : 'text-red-400'}`}>
-                        {isWin ? 'Victoria' : 'Derrota'}
+                  <div className="text-right flex-shrink-0">
+                    {won !== null && (
+                      <div className={`font-bold text-sm ${won ? 'text-green-400' : 'text-red-400'}`}>
+                        {won ? 'Victoria' : 'Derrota'}
                       </div>
                     )}
-                    {roundsWon != null && roundsLost != null && (
-                      <div className="text-xs text-muted-foreground">{roundsWon} - {roundsLost}</div>
+                    {won === null && <div className="text-xs text-muted-foreground">—</div>}
+                    {roundsLine && (
+                      <div className="text-xs text-muted-foreground mt-0.5 tabular-nums">{roundsLine}</div>
                     )}
                   </div>
                 </div>
